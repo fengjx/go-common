@@ -123,6 +123,14 @@ func SetInterval(fn func(), d time.Duration) {
 
 // SafeGo 启动一个 goroutine，并捕获 panic
 func SafeGo(f func()) {
+	go func() {
+		errs.Recover()
+		f()
+	}()
+}
+
+// SafeCall 执行函数，并捕获 panic
+func SafeCall(f func()) {
 	errs.Recover()
 	f()
 }
