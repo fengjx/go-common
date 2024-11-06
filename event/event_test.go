@@ -5,17 +5,17 @@ import (
 	"time"
 )
 
-func TestEvent(t *testing.T) {
-	var test Topic = "topic-test"
-	for i := 0; i < 100; i++ {
-		idx := i
-		Subscribe(test, func(msg interface{}) {
-			eventMsg := msg.(map[string]string)
-			t.Logf("idx - %d - %s\n", idx, eventMsg["hello"])
-			time.Sleep(time.Second)
-		})
-	}
-	Publish(test, map[string]string{"hello": "world"})
+func TestOnDuplicateHandler(t *testing.T) {
+	testEvent := Event[string]("foo")
 
-	Quit()
+	On(testEvent, func(data string) {
+		t.Log("bar", data)
+	})
+	On(testEvent, func(data string) {
+		t.Log("abc", data)
+	})
+
+	Emit(testEvent, "testData")
+
+	time.Sleep(time.Second)
 }

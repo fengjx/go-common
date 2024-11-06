@@ -1,48 +1,46 @@
 package event
 
 import (
+	"context"
+	"strings"
 	"sync"
-	"time"
 
-	"github.com/fengjx/go-halo/worker"
+	"github.com/fengjx/go-halo/halo"
 )
 
-type eventHandle func(msg interface{})
+// Event 事件定义
+type Event[T any] string
 
-var eventHandles = make(map[Topic][]eventHandle)
+// HandlerFunc 事件处理函数
+type HandlerFunc[T any] func(data T)
 
-type Topic string
+var (
+	handlerMap = make(map[string][]any)
 
-var lock sync.Mutex
-var workerPool = worker.New("event-pool", worker.WithCapacity(5000), worker.WithSubmitTimeout(time.Millisecond*500))
+	handlerLock sync.Mutex
+)
 
-// Subscribe 订阅事件处理
-func Subscribe(topic Topic, handle eventHandle) {
-	lock.Lock()
-	handles := eventHandles[topic]
-	handles = append(handles, handle)
-	eventHandles[topic] = handles
-	lock.Unlock()
-}
-
-func Publish(topic Topic, msg interface{}) {
-	handles := eventHandles[topic]
-	for _, fun := range handles {
-		if fun == nil {
-			continue
-		}
-		// 这一步很重要，不要直接使用fun变量，闭包会持有外部变量引用，下一个循环fun会指向其他 handle 导致执行错误
-		// 后续如果重构需要注意别改错了
-		task := fun
-		err := workerPool.Submit(func() {
-			task(msg)
-		})
-		if err != nil {
-			// todo print log
-		}
+// On Register a handler for an event.
+func On[T any](e Event[T], h HandlerFunc[T]) {
+	name := strings.TrimSpace(string(e))
+	if name == "" {
+		panic("event name cannot be empty")
+	}
+	handlerLock.Lock()
+	defer handlerLock.Unlock()
+	if hs, ok := handlerMap[name]; ok {
+		handlerMap[name] = append(hs, h)
+	} else {
+		handlerMap[name] = []any{h}
 	}
 }
 
-func Quit() {
-	workerPool.Release()
+// Emit Trigger an event.
+func Emit[T any](e Event[T], data T) {
+	for _, h := range handlerMap[string(e)] {
+		fn := h.(HandlerFunc[T])
+		halo.GracefulRun(func(ctx context.Context) {
+			fn(data)
+		})
+	}
 }
