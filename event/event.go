@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fengjx/go-halo/halo"
 )
@@ -12,7 +13,7 @@ import (
 type Event[T any] string
 
 // HandlerFunc 事件处理函数
-type HandlerFunc[T any] func(data T)
+type HandlerFunc[T any] func(data T, eventTime time.Time)
 
 var (
 	handlerMap = make(map[string][]any)
@@ -37,10 +38,11 @@ func On[T any](e Event[T], h HandlerFunc[T]) {
 
 // Emit Trigger an event.
 func Emit[T any](e Event[T], data T) {
+	now := time.Now()
 	for _, h := range handlerMap[string(e)] {
 		fn := h.(HandlerFunc[T])
 		halo.GracefulRun(func(ctx context.Context) {
-			fn(data)
+			fn(data, now)
 		})
 	}
 }
