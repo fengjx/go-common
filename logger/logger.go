@@ -132,7 +132,7 @@ func NewConsole(opts ...zap.Option) Logger {
 	encoderConfig.TimeKey = "time"
 	encoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000")
 	encoderConfig.FunctionKey = "fn"
-	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder      // 文件名:行号
+	encoderConfig.EncodeCaller = zapcore.FullCallerEncoder       // 文件名:行号
 	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder // 日志级别支持颜色
 
 	atomicLevel := zap.NewAtomicLevelAt(zapcore.DebugLevel)
@@ -147,6 +147,7 @@ func NewConsole(opts ...zap.Option) Logger {
 
 func newWithZap(l *zap.Logger, atomicLevel zap.AtomicLevel, opts ...zap.Option) Logger {
 	options := []zap.Option{
+		zap.AddCaller(),
 		zap.AddStacktrace(zap.PanicLevel),
 	}
 	options = append(options, opts...)
